@@ -11,21 +11,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Récupérer le code
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ Installer Docker Compose
       - name: Set up Docker Compose
         run: |
           sudo apt-get update
           sudo apt-get install -y docker-compose
 
-      # 3️⃣ Construire et démarrer les services
       - name: Build and start services
         run: docker-compose up -d --build
 
-      # 4️⃣ Attendre que le backend soit prêt
       - name: Wait for backend
         run: |
           for i in {1..20}; do
@@ -33,23 +29,22 @@ jobs:
             echo "Backend not ready yet..."
             sleep 5
           done
+          echo "Backend did not start ❌" > test-results.txt
           exit 1
 
-      # 5️⃣ Tester l’inscription et écrire les résultats
       - name: Test inscription API
         run: |
-          RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php)
-          echo "Inscription response: $RESPONSE" > test-results.txt
+          RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php || echo "No response")
+          echo "Inscription response: $RESPONSE" >> test-results.txt
           if [[ "$RESPONSE" != *"Inscription réussie"* ]]; then
             echo "Test inscription failed ❌" >> test-results.txt
             exit 1
           fi
           echo "Test inscription passed ✅" >> test-results.txt
 
-      # 6️⃣ Vérifier la liste et écrire les résultats
       - name: Test list.php
         run: |
-          LIST=$(curl -s http://localhost:8081/list.php)
+          LIST=$(curl -s http://localhost:8081/list.php || echo "No response")
           echo "List response: $LIST" >> test-results.txt
           if [[ "$LIST" != *"ciuser@example.com"* ]]; then
             echo "User not found ❌" >> test-results.txt
@@ -57,17 +52,18 @@ jobs:
           fi
           echo "User found ✅" >> test-results.txt
 
-      # 7️⃣ Upload des résultats
+      - name: Show test results
+        run: cat test-results.txt
+
       - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: test-results.txt
 
-      # 8️⃣ Capturer les logs du backend
       - name: Save backend logs
         if: always()
-        run: docker logs $(docker ps -q --filter "name=backend") > backend-logs.txt
+        run: docker logs $(docker ps -q --filter "name=backend") > backend-logs.txt || echo "No backend logs" > backend-logs.txt
 
       - name: Upload backend logs
         if: always()
@@ -76,7 +72,6 @@ jobs:
           name: backend-logs
           path: backend-logs.txt
 
-      # 9️⃣ Nettoyer les conteneurs
       - name: Stop services
         if: always()
         run: docker-compose down
