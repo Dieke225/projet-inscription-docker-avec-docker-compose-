@@ -25,10 +25,10 @@ jobs:
       - name: Build and start services
         run: docker-compose up -d --build
 
-      # 4️⃣ Attendre que le backend soit prêt
+      # 4️⃣ Attendre que le backend soit prêt (jusqu’à 100s)
       - name: Wait for backend
         run: |
-          for i in {1..10}; do
+          for i in {1..20}; do
             curl -s http://localhost:8081/health && exit 0
             echo "Backend not ready yet..."
             sleep 5
@@ -38,15 +38,26 @@ jobs:
       # 5️⃣ Tester une inscription
       - name: Test inscription API
         run: |
-          RESPONSE=$(curl -s -X POST -d "nom=TestUser&email=test@example.com" http://localhost:8081/api.php)
+          RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php)
           echo "Response: $RESPONSE"
-          if [[ "$RESPONSE" != *"✅"* ]]; then
+          if [[ "$RESPONSE" != *"Inscription réussie"* ]]; then
             echo "Test failed ❌"
             exit 1
           fi
           echo "Test passed ✅"
 
-      # 6️⃣ Nettoyer
+      # 6️⃣ Vérifier que l’utilisateur est listé
+      - name: Test list.php
+        run: |
+          LIST=$(curl -s http://localhost:8081/list.php)
+          echo "List: $LIST"
+          if [[ "$LIST" != *"ciuser@example.com"* ]]; then
+            echo "User not found in list ❌"
+            exit 1
+          fi
+          echo "User found in list ✅"
+
+      # 7️⃣ Nettoyer les conteneurs
       - name: Stop services
         if: always()
         run: docker-compose down
