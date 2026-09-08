@@ -39,25 +39,44 @@ jobs:
       - name: Test inscription API
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php)
-          echo "Response: $RESPONSE"
+          echo "Response: $RESPONSE" > test-results.txt
           if [[ "$RESPONSE" != *"Inscription réussie"* ]]; then
-            echo "Test failed ❌"
+            echo "Test failed ❌" >> test-results.txt
             exit 1
           fi
-          echo "Test passed ✅"
+          echo "Test passed ✅" >> test-results.txt
 
       # 6️⃣ Vérifier que l’utilisateur est listé
       - name: Test list.php
         run: |
           LIST=$(curl -s http://localhost:8081/list.php)
-          echo "List: $LIST"
+          echo "List: $LIST" >> test-results.txt
           if [[ "$LIST" != *"ciuser@example.com"* ]]; then
-            echo "User not found in list ❌"
+            echo "User not found in list ❌" >> test-results.txt
             exit 1
           fi
-          echo "User found in list ✅"
+          echo "User found in list ✅" >> test-results.txt
 
-      # 7️⃣ Nettoyer les conteneurs
+      # 7️⃣ Upload des résultats comme artifact
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: test-results.txt
+
+      # 8️⃣ Capturer les logs du backend pour diagnostic
+      - name: Save backend logs
+        if: always()
+        run: docker logs $(docker ps -q --filter "name=backend") > backend-logs.txt
+
+      - name: Upload backend logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-logs
+          path: backend-logs.txt
+
+      # 9️⃣ Nettoyer les conteneurs
       - name: Stop services
         if: always()
         run: docker-compose down
