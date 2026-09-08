@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Récupérer le code du dépôt
+      # 1️⃣ Récupérer le code
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -25,7 +25,7 @@ jobs:
       - name: Build and start services
         run: docker-compose up -d --build
 
-      # 4️⃣ Attendre que le backend soit prêt (jusqu’à 100 secondes)
+      # 4️⃣ Attendre que le backend soit prêt
       - name: Wait for backend
         run: |
           for i in {1..20}; do
@@ -35,36 +35,36 @@ jobs:
           done
           exit 1
 
-      # 5️⃣ Tester l’inscription
+      # 5️⃣ Tester l’inscription et écrire les résultats
       - name: Test inscription API
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php)
-          echo "Response: $RESPONSE" > test-results.txt
+          echo "Inscription response: $RESPONSE" > test-results.txt
           if [[ "$RESPONSE" != *"Inscription réussie"* ]]; then
-            echo "Test failed ❌" >> test-results.txt
+            echo "Test inscription failed ❌" >> test-results.txt
             exit 1
           fi
-          echo "Test passed ✅" >> test-results.txt
+          echo "Test inscription passed ✅" >> test-results.txt
 
-      # 6️⃣ Vérifier que l’utilisateur est listé
+      # 6️⃣ Vérifier la liste et écrire les résultats
       - name: Test list.php
         run: |
           LIST=$(curl -s http://localhost:8081/list.php)
-          echo "List: $LIST" >> test-results.txt
+          echo "List response: $LIST" >> test-results.txt
           if [[ "$LIST" != *"ciuser@example.com"* ]]; then
-            echo "User not found in list ❌" >> test-results.txt
+            echo "User not found ❌" >> test-results.txt
             exit 1
           fi
-          echo "User found in list ✅" >> test-results.txt
+          echo "User found ✅" >> test-results.txt
 
-      # 7️⃣ Sauvegarder les résultats du test
+      # 7️⃣ Upload des résultats
       - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: test-results.txt
 
-      # 8️⃣ Capturer les logs du backend pour diagnostic
+      # 8️⃣ Capturer les logs du backend
       - name: Save backend logs
         if: always()
         run: docker logs $(docker ps -q --filter "name=backend") > backend-logs.txt
