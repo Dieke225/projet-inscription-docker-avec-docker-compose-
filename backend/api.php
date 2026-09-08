@@ -4,6 +4,9 @@ header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Content-Type: application/json; charset=UTF-8");
 
+ini_set('display_errors', 0);
+error_reporting(0);
+
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
@@ -46,12 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nom = trim($_POST['nom'] ?? '');
     $email = trim($_POST['email'] ?? '');
 
-    $champsManquants = [];
-    if (empty($nom)) $champsManquants[] = "le nom";
-    if (empty($email)) $champsManquants[] = "l’adresse e‑mail";
-
-    if (!empty($champsManquants)) {
-        echo json_encode(["success" => false, "message" => "Veuillez remplir " . implode(" et ", $champsManquants) . "."]);
+    if (empty($nom) || empty($email)) {
+        echo json_encode(["success" => false, "message" => "Veuillez remplir tous les champs."]);
         exit;
     }
 

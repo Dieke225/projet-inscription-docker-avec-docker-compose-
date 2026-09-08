@@ -9,61 +9,71 @@ document.addEventListener("DOMContentLoaded", () => {
   form.appendChild(messageBox);
 
   form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  messageBox.textContent = "";
+    e.preventDefault();
+    messageBox.textContent = "";
 
-  const nom = nomInput.value.trim();
-  const email = emailInput.value.trim();
-  const champsManquants = [];
+    const nom = nomInput.value.trim();
+    const email = emailInput.value.trim();
 
-  if (!nom) champsManquants.push("le nom");
-  if (!email) champsManquants.push("l’adresse e‑mail");
+    if (!nom || !email) {
+      messageBox.textContent = "Veuillez remplir tous les champs.";
+      return;
+    }
 
-  if (champsManquants.length > 0) {
-    messageBox.textContent = `Veuillez remplir ${champsManquants.join(" et ")}.`;
-    return;
-  }
+    try {
+      const response = await fetch("http://localhost:8081/api.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `nom=${encodeURIComponent(nom)}&email=${encodeURIComponent(email)}`
+      });
 
-  try {
-    const response = await fetch("http://localhost:8081/api.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: `nom=${encodeURIComponent(nom)}&email=${encodeURIComponent(email)}`
-    });
-
-   const result = await response.json();
+      const result = await response.json(); // ✅ backend renvoie du JSON
       messageBox.style.color = result.success ? "green" : "red";
       messageBox.textContent = result.message;
 
-// 🔹 Vider les champs si succès
-if (result.success) {
-  nomInput.value = "";
-  emailInput.value = "";
-}
+      if (result.success) {
+        nomInput.value = "";
+        emailInput.value = "";
+        afficherInscriptions(); // ✅ rafraîchir la liste
+      }
 
-// Rafraîchir la liste
-afficherInscriptions();
-
-  } catch (error) {
-    messageBox.textContent = "Erreur de connexion au serveur ❌";
-  }
-});
+    } catch (error) {
+      messageBox.textContent = "Erreur de connexion au serveur ❌";
+    }
+  });
 
   // Charger la liste dès l’ouverture
   afficherInscriptions();
+
+  // 🔹 Rafraîchir automatiquement toutes les 10 secondes
+  setInterval(afficherInscriptions, 10000);
 });
 
 // Fonction pour afficher les inscriptions
 async function afficherInscriptions() {
-  const response = await fetch("http://localhost:8081/list.php");
-  const data = await response.json();
+  try {
+    const response = await fetch("http://localhost:8081/list.php");
+    const data = await response.json();
 
-  const container = document.getElementById("inscriptions");
-  container.innerHTML = "";
+    const container = document.getElementById("inscriptions");
+    container.innerHTML = "";
 
-  data.forEach(user => {
-    const item = document.createElement("p");
-    item.textContent = `${user.nom} (${user.email}) inscrit le ${user.date_inscription}`;
-    container.appendChild(item);
-  });
+    data.forEach(user => {
+      const item = document.createElement("p");
+      
+    const date = new Date(user.created_at);
+      const dateLocale = date.toLocaleString("fr-FR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+
+      item.textContent = `${user.nom} (${user.email}) inscrit le ${dateLocale}`;
+      container.appendChild(item);
+    });
+  } catch (error) {
+    console.error("Erreur lors du chargement des inscriptions ❌", error);
+  }
 }
