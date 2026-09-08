@@ -1,18 +1,21 @@
 # Stage 1 : build
 FROM php:8.2-apache AS builder
-COPY ./api.php /var/www/html/api.php
+WORKDIR /var/www/html
+
+# --- MODIFIÉ : On copie TOUS les fichiers du dossier local ./backend (api.php, list.php, etc.) ---
+COPY . . 
 
 # Stage 2 : runtime
 FROM php:8.2-apache
 
-# Installer extensions nécessaires (dans le stage final)
+# Installer extensions nécessaires
 RUN docker-php-ext-install mysqli pdo pdo_mysql
 
 # Créer utilisateur non-root "diekeuser"
 RUN groupadd -g 1001 diekeuser && \
     useradd -u 1001 -g diekeuser -m diekeuser
 
-# Copier le code depuis le builder
+# Copier TOUT le code depuis le builder
 COPY --from=builder /var/www/html /var/www/html
 
 RUN chown -R diekeuser:diekeuser /var/www/html

@@ -1,12 +1,14 @@
 <?php
-header("Access-Control-Allow-Origin: http://localhost:8085");
+header("Access-Control-Allow-Origin: http://localhost:3000");
 header("Access-Control-Allow-Methods: GET");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 
 $host = getenv('DB_HOST') ?: 'inscription-db';
 $user = getenv('DB_USER') ?: 'root';
-$pass = getenv('DB_PASS') ?: 'example';
+$pass = getenv('DB_PASSWORD') ?: 'root';
 $db   = getenv('DB_NAME') ?: 'inscriptions';
+
+
 
 $conn = new mysqli($host, $user, $pass, $db);
 

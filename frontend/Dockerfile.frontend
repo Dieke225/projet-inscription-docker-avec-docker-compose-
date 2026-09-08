@@ -3,7 +3,9 @@ FROM php:8.2-apache AS builder
 
 RUN docker-php-ext-install mysqli pdo pdo_mysql
 WORKDIR /var/www/html
-COPY ./index.php /var/www/html/index.php
+
+# --- MODIFIÉ : On copie TOUT le dossier (index.php, style.css, script.js, etc.) ---
+COPY . . 
 
 # Stage 2 : runtime
 FROM php:8.2-apache

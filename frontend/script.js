@@ -9,39 +9,45 @@ document.addEventListener("DOMContentLoaded", () => {
   form.appendChild(messageBox);
 
   form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    messageBox.textContent = "";
+  e.preventDefault();
+  messageBox.textContent = "";
 
-    const nom = nomInput.value.trim();
-    const email = emailInput.value.trim();
-    const champsManquants = [];
+  const nom = nomInput.value.trim();
+  const email = emailInput.value.trim();
+  const champsManquants = [];
 
-    if (!nom) champsManquants.push("le nom");
-    if (!email) champsManquants.push("l’adresse e‑mail");
+  if (!nom) champsManquants.push("le nom");
+  if (!email) champsManquants.push("l’adresse e‑mail");
 
-    if (champsManquants.length > 0) {
-      messageBox.textContent = `Veuillez remplir ${champsManquants.join(" et ")}.`;
-      return;
-    }
+  if (champsManquants.length > 0) {
+    messageBox.textContent = `Veuillez remplir ${champsManquants.join(" et ")}.`;
+    return;
+  }
 
-    try {
-      const response = await fetch("http://localhost:8081/api.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `nom=${encodeURIComponent(nom)}&email=${encodeURIComponent(email)}`
-      });
+  try {
+    const response = await fetch("http://localhost:8081/api.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `nom=${encodeURIComponent(nom)}&email=${encodeURIComponent(email)}`
+    });
 
-      const result = await response.text();
-      messageBox.style.color = result.includes("✅") ? "green" : "red";
-      messageBox.textContent = result;
+   const result = await response.json();
+      messageBox.style.color = result.success ? "green" : "red";
+      messageBox.textContent = result.message;
 
-      // Rafraîchir la liste après ajout
-      afficherInscriptions();
+// 🔹 Vider les champs si succès
+if (result.success) {
+  nomInput.value = "";
+  emailInput.value = "";
+}
 
-    } catch (error) {
-      messageBox.textContent = "Erreur de connexion au serveur ❌";
-    }
-  });
+// Rafraîchir la liste
+afficherInscriptions();
+
+  } catch (error) {
+    messageBox.textContent = "Erreur de connexion au serveur ❌";
+  }
+});
 
   // Charger la liste dès l’ouverture
   afficherInscriptions();
