@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Récupérer ton code
+      # 1️⃣ Récupérer le code du dépôt
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -21,11 +21,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y docker-compose
 
-      # 3️⃣ Lancer les services
+      # 3️⃣ Construire et démarrer les services
       - name: Build and start services
         run: docker-compose up -d --build
 
-      # 4️⃣ Attendre que le backend soit prêt (jusqu’à 100s)
+      # 4️⃣ Attendre que le backend soit prêt (jusqu’à 100 secondes)
       - name: Wait for backend
         run: |
           for i in {1..20}; do
@@ -35,7 +35,7 @@ jobs:
           done
           exit 1
 
-      # 5️⃣ Tester une inscription
+      # 5️⃣ Tester l’inscription
       - name: Test inscription API
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php)
@@ -57,9 +57,9 @@ jobs:
           fi
           echo "User found in list ✅" >> test-results.txt
 
-      # 7️⃣ Upload des résultats comme artifact
+      # 7️⃣ Sauvegarder les résultats du test
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: test-results.txt
@@ -71,7 +71,7 @@ jobs:
 
       - name: Upload backend logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: backend-logs
           path: backend-logs.txt
