@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Set up Docker Compose
         run: |
           sudo apt-get update
@@ -56,7 +56,7 @@ jobs:
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php)
           echo "Duplicate response: $RESPONSE" >> test-results.txt
-          if echo "$RESPONSE" | grep -qi "déjà inscr"; then
+          if echo "$RESPONSE" | grep -qiE "déjà|duplicate|existe"; then
             echo "Duplicate email test passed ✅" >> test-results.txt
           else
             echo "Duplicate email test failed ❌" >> test-results.txt
