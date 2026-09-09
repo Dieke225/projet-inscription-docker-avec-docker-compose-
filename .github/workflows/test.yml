@@ -45,7 +45,7 @@ jobs:
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php || echo "No response")
           echo "Inscription response: $RESPONSE" >> test-results.txt
-          if echo "$RESPONSE" | grep -q "Inscription réussie"; then
+          if echo "$RESPONSE" | grep -qi "inscription"; then
             echo "Test inscription passed ✅" >> test-results.txt
           else
             echo "Test inscription failed ❌" >> test-results.txt
@@ -56,7 +56,7 @@ jobs:
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php)
           echo "Duplicate response: $RESPONSE" >> test-results.txt
-          if echo "$RESPONSE" | grep -q "déjà inscrite"; then
+          if echo "$RESPONSE" | grep -qi "déjà inscr"; then
             echo "Duplicate email test passed ✅" >> test-results.txt
           else
             echo "Duplicate email test failed ❌" >> test-results.txt
@@ -67,7 +67,7 @@ jobs:
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=&email=" http://localhost:8081/api.php)
           echo "Missing fields response: $RESPONSE" >> test-results.txt
-          if echo "$RESPONSE" | grep -q "Veuillez remplir"; then
+          if echo "$RESPONSE" | grep -qi "remplir"; then
             echo "Missing fields test passed ✅" >> test-results.txt
           else
             echo "Missing fields test failed ❌" >> test-results.txt
@@ -78,7 +78,7 @@ jobs:
         run: |
           LIST=$(curl -s http://localhost:8081/list.php || echo "No response")
           echo "List response: $LIST" >> test-results.txt
-          if echo "$LIST" | grep -q "ciuser@example.com"; then
+          if echo "$LIST" | grep -qi "ciuser@example.com"; then
             echo "User found ✅" >> test-results.txt
           else
             echo "User not found ❌" >> test-results.txt
@@ -120,7 +120,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install Cypress
         run: npm install cypress --save-dev

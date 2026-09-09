@@ -10,8 +10,20 @@ $conn = @new mysqli($host, $user, $pass, $db);
 
 if ($conn->connect_error) {
     http_response_code(500);
-    echo json_encode(["status" => "error", "db" => "unreachable"]);
-} else {
-    http_response_code(200);
-    echo json_encode(["status" => "ok", "db" => "connected"]);
+    echo json_encode([
+        "status" => "error",
+        "db" => "unreachable",
+        "php_version" => PHP_VERSION,
+        "mysql_version" => null
+    ]);
+    exit;
 }
+
+http_response_code(200);
+echo json_encode([
+    "status" => "ok",
+    "db" => "connected",
+    "php_version" => PHP_VERSION,
+    "mysql_version" => $conn->server_info
+]);
+?>
