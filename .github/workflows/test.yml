@@ -74,16 +74,18 @@ jobs:
             exit 1
           fi
 
-      - name: Test list.php
+      - name: Test inscription API (duplicate email)
         run: |
-          LIST=$(curl -s http://localhost:8081/list.php || echo "No response")
-          echo "List response: $LIST" >> test-results.txt
-          if echo "$LIST" | grep -qi "ciuser@example.com"; then
-            echo "User found ✅" >> test-results.txt
+          RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php)
+          echo "Duplicate response: $RESPONSE" >> test-results.txt
+          if echo "$RESPONSE" | grep -qi '"success":false'; then
+            echo "Duplicate email test passed ✅" >> test-results.txt
           else
-            echo "User not found ❌" >> test-results.txt
+            echo "Duplicate email test failed ❌" >> test-results.txt
             exit 1
           fi
+
+
 
       - name: Show test results
         run: cat test-results.txt
