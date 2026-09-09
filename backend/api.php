@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // --- ROUTE HEALTH ---
-if ($_SERVER['REQUEST_URI'] === '/health') {
+if (strpos($_SERVER['REQUEST_URI'], '/health') !== false) {
     $host = getenv('DB_HOST') ?: 'inscription-db';
     $user = getenv('DB_USER') ?: 'root';
     $pass = getenv('DB_PASSWORD') ?: 'root';
