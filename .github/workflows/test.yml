@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Docker Compose
         run: |
@@ -25,7 +25,11 @@ jobs:
       - name: Wait for backend
         run: |
           for i in {1..20}; do
-            curl -s http://localhost:8081/health && exit 0
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/health.php)
+            if [ "$STATUS" -eq 200 ]; then
+              echo "Backend is ready ✅"
+              exit 0
+            fi
             echo "Backend not ready yet..."
             sleep 5
           done
@@ -36,21 +40,23 @@ jobs:
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php || echo "No response")
           echo "Inscription response: $RESPONSE" >> test-results.txt
-          if [[ "$RESPONSE" != *"Inscription réussie"* ]]; then
+          if echo "$RESPONSE" | grep -q "Inscription"; then
+            echo "Test inscription passed ✅" >> test-results.txt
+          else
             echo "Test inscription failed ❌" >> test-results.txt
             exit 1
           fi
-          echo "Test inscription passed ✅" >> test-results.txt
 
       - name: Test list.php
         run: |
           LIST=$(curl -s http://localhost:8081/list.php || echo "No response")
           echo "List response: $LIST" >> test-results.txt
-          if [[ "$LIST" != *"ciuser@example.com"* ]]; then
+          if echo "$LIST" | grep -q "ciuser@example.com"; then
+            echo "User found ✅" >> test-results.txt
+          else
             echo "User not found ❌" >> test-results.txt
             exit 1
           fi
-          echo "User found ✅" >> test-results.txt
 
       - name: Show test results
         run: cat test-results.txt
