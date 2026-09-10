@@ -14,10 +14,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install jq
+      # FIXED: Added curl to the installation command
+      - name: Install jq and curl
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq
+          sudo apt-get install -y jq curl
 
       - name: Build and start services
         run: docker-compose up -d --build
