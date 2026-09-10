@@ -22,12 +22,13 @@ jobs:
       - name: Build and start services
         run: docker-compose up -d --build
 
-      - name: Wait for backend
+    - name: Wait for backend
         run: |
           for i in {1..20}; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/health.php)
+            # On cible directement l'interrupteur interne du fichier api.php via le mot clé /health
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/api.php/health)
             if [ "$STATUS" -eq 200 ]; then
-              echo "Backend is ready ✅"
+              echo "Backend and Database are fully ready ✅"
               exit 0
             fi
             echo "Backend not ready yet..."
@@ -38,14 +39,16 @@ jobs:
 
       - name: Reset database users table
         run: |
-          docker exec inscription-db mysql -uroot -proot inscriptions -e "DROP TABLE IF EXISTS users; CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(255), email VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+          # Correction : Ajout de la contrainte UNIQUE essentielle pour le test de doublon
+          docker exec inscription-db mysql -uroot -proot inscriptions -e "DROP TABLE IF EXISTS users; CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(255), email VARCHAR(255) NOT NULL UNIQUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
           echo "Users table reset ✅" >> test-results.txt
 
       - name: Test inscription API (success)
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php || echo "No response")
           echo "Inscription response: $RESPONSE" >> test-results.txt
-          if echo "$RESPONSE" | grep -qi "inscription"; then
+          # On valide le booléen JSON plutôt que la chaîne accentuée textuelle
+          if echo "$RESPONSE" | grep -q '"success":true'; then
             echo "Test inscription passed ✅" >> test-results.txt
           else
             echo "Test inscription failed ❌" >> test-results.txt
@@ -56,7 +59,7 @@ jobs:
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=&email=" http://localhost:8081/api.php)
           echo "Missing fields response: $RESPONSE" >> test-results.txt
-          if echo "$RESPONSE" | grep -qi "remplir"; then
+          if echo "$RESPONSE" | grep -q '"success":false'; then
             echo "Missing fields test passed ✅" >> test-results.txt
           else
             echo "Missing fields test failed ❌" >> test-results.txt
@@ -67,12 +70,13 @@ jobs:
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php)
           echo "Duplicate response: $RESPONSE" >> test-results.txt
-          if echo "$RESPONSE" | grep -qi '"success":false'; then
+          if echo "$RESPONSE" | grep -q '"success":false'; then
             echo "Duplicate email test passed ✅" >> test-results.txt
           else
             echo "Duplicate email test failed ❌" >> test-results.txt
             exit 1
           fi
+
 
       - name: Show test results
         run: cat test-results.txt
