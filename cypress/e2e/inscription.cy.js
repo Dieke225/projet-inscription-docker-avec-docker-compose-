@@ -1,6 +1,6 @@
 describe('Inscription frontend', () => {
   beforeEach(() => {
-    cy.visit('http://localhost:3000'); // ton frontend
+    cy.visit('/'); // Utilise la variable CYPRESS_BASE_URL configurée à http://localhost:3000
   });
 
   it('inscrit un utilisateur avec succès', () => {
@@ -25,3 +25,4 @@ describe('Inscription frontend', () => {
     cy.contains('Veuillez remplir tous les champs.').should('exist');
   });
 });
+
