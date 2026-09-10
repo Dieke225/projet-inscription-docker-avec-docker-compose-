@@ -44,10 +44,7 @@ jobs:
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php || echo "No response")
           echo "Inscription response: $RESPONSE" >> test-results.txt
-          
-          # Extraction sécurisée du champ success
           SUCCESS_STATUS=$(echo "$RESPONSE" | jq -r '.success' 2>/dev/null || echo "invalid_json")
-          
           if [ "$SUCCESS_STATUS" = "true" ]; then
             echo "Test inscription passed ✅" >> test-results.txt
           else
@@ -60,7 +57,6 @@ jobs:
           RESPONSE=$(curl -s -X POST -d "nom=&email=" http://localhost:8081/api.php)
           echo "Missing fields response: $RESPONSE" >> test-results.txt
           SUCCESS_STATUS=$(echo "$RESPONSE" | jq -r '.success' 2>/dev/null || echo "invalid_json")
-          
           if [ "$SUCCESS_STATUS" = "false" ]; then
             echo "Missing fields test passed ✅" >> test-results.txt
           else
@@ -73,7 +69,6 @@ jobs:
           RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php)
           echo "Duplicate response: $RESPONSE" >> test-results.txt
           SUCCESS_STATUS=$(echo "$RESPONSE" | jq -r '.success' 2>/dev/null || echo "invalid_json")
-          
           if [ "$SUCCESS_STATUS" = "false" ]; then
             echo "Duplicate email test passed ✅" >> test-results.txt
           else
@@ -88,11 +83,13 @@ jobs:
         run: |
           docker exec inscription-db mysql -uroot -proot inscriptions -e "TRUNCATE TABLE users;"
 
-      # Remplacement de l'installation manuelle par l'action Cypress officielle (Node v20 stable)
+      # MODIFICATION : Configuration robuste pour attendre le frontend-1 sur le port 3000
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
           browser: chrome
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 60
         env:
           CYPRESS_BASE_URL: http://localhost:3000
 
