@@ -14,20 +14,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # FIXED: Added curl to the installation command
       - name: Install jq and curl
         run: |
           sudo apt-get update
           sudo apt-get install -y jq curl
 
       - name: Build and start services
-        run: docker-compose up -d --build
+        run: docker compose up -d --build
 
       - name: Wait for services to be healthy
         run: |
           echo "Waiting for services healthchecks..."
           for i in {1..20}; do
-            if [ "$(docker inspect --format='{{.State.Health.Status}}' $(docker-compose ps -q frontend))" = "healthy" ]; then
+            if [ "$(docker inspect --format='{{.State.Health.Status}}' $(docker compose ps -q frontend))" = "healthy" ]; then
               echo "All services are healthy and running ✅"
               exit 0
             fi
@@ -112,7 +111,7 @@ jobs:
 
       - name: Save all container logs
         if: always()
-        run: docker-compose logs --no-color > all-containers-logs.txt
+        run: docker compose logs --no-color > all-containers-logs.txt
 
       - name: Upload all container logs
         if: always()
@@ -123,4 +122,4 @@ jobs:
 
       - name: Stop services
         if: always()
-        run: docker-compose down
+        run: docker compose down
