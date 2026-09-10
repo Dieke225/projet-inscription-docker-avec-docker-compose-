@@ -44,10 +44,14 @@ jobs:
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php || echo "No response")
           echo "Inscription response: $RESPONSE" >> test-results.txt
-          if [ "$(echo "$RESPONSE" | jq -r '.success')" = "true" ]; then
+          
+          # Extraction sécurisée du champ success
+          SUCCESS_STATUS=$(echo "$RESPONSE" | jq -r '.success' 2>/dev/null || echo "invalid_json")
+          
+          if [ "$SUCCESS_STATUS" = "true" ]; then
             echo "Test inscription passed ✅" >> test-results.txt
           else
-            echo "Test inscription failed ❌" >> test-results.txt
+            echo "Test inscription failed ❌. Server returned: $RESPONSE" >> test-results.txt
             exit 1
           fi
 
@@ -55,10 +59,12 @@ jobs:
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=&email=" http://localhost:8081/api.php)
           echo "Missing fields response: $RESPONSE" >> test-results.txt
-          if [ "$(echo "$RESPONSE" | jq -r '.success')" = "false" ]; then
+          SUCCESS_STATUS=$(echo "$RESPONSE" | jq -r '.success' 2>/dev/null || echo "invalid_json")
+          
+          if [ "$SUCCESS_STATUS" = "false" ]; then
             echo "Missing fields test passed ✅" >> test-results.txt
           else
-            echo "Missing fields test failed ❌" >> test-results.txt
+            echo "Missing fields test failed ❌. Server returned: $RESPONSE" >> test-results.txt
             exit 1
           fi
 
@@ -66,30 +72,27 @@ jobs:
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php)
           echo "Duplicate response: $RESPONSE" >> test-results.txt
-          if [ "$(echo "$RESPONSE" | jq -r '.success')" = "false" ]; then
+          SUCCESS_STATUS=$(echo "$RESPONSE" | jq -r '.success' 2>/dev/null || echo "invalid_json")
+          
+          if [ "$SUCCESS_STATUS" = "false" ]; then
             echo "Duplicate email test passed ✅" >> test-results.txt
           else
-            echo "Duplicate email test failed ❌" >> test-results.txt
+            echo "Duplicate email test failed ❌. Server returned: $RESPONSE" >> test-results.txt
             exit 1
           fi
 
       # ==========================================
       # SECTION 2 : TESTS CYPRESS E2E
       # ==========================================
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Install dependencies and Cypress
-        run: npm install
-
       - name: Reset table before E2E tests
         run: |
           docker exec inscription-db mysql -uroot -proot inscriptions -e "TRUNCATE TABLE users;"
 
+      # Remplacement de l'installation manuelle par l'action Cypress officielle (Node v20 stable)
       - name: Run Cypress tests
-        run: npx cypress run
+        uses: cypress-io/github-action@v6
+        with:
+          browser: chrome
         env:
           CYPRESS_BASE_URL: http://localhost:3000
 
