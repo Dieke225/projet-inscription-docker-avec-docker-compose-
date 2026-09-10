@@ -36,6 +36,10 @@ jobs:
         run: |
           docker exec inscription-db mysql -uroot -proot inscriptions -e "DROP TABLE IF EXISTS users; CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(255), email VARCHAR(255) NOT NULL UNIQUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
           echo "Users table reset ✅" > test-results.txt
+          
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
 
       # ==========================================
       # SECTION 1 : TESTS API BACKEND
