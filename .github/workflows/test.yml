@@ -7,8 +7,9 @@ on:
     branches: [ "main" ]
 
 jobs:
-  backend-tests:
+  integration-and-e2e-tests:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -40,6 +41,9 @@ jobs:
           docker exec inscription-db mysql -uroot -proot inscriptions -e "DROP TABLE IF EXISTS users; CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(255), email VARCHAR(255) NOT NULL UNIQUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
           echo "Users table reset ✅" >> test-results.txt
 
+      # ==========================================
+      # SECTION 1 : TESTS API BACKEND
+      # ==========================================
       - name: Test inscription API (success)
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=CIUser&email=ciuser@example.com" http://localhost:8081/api.php || echo "No response")
@@ -73,6 +77,31 @@ jobs:
             exit 1
           fi
 
+      # ==========================================
+      # SECTION 2 : PREPARATION & TESTS CYPRESS
+      # ==========================================
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies and Cypress
+        run: npm install
+
+      - name: Reset table before E2E tests
+        run: |
+          docker exec inscription-db mysql -uroot -proot inscriptions -e "TRUNCATE TABLE users;"
+
+      - name: Run Cypress tests
+        # On utilise le port exposé par votre compose pour le frontend (ex: 8080 ou 3000 selon votre compose.yml)
+        # CYPRESS_BASE_URL permet de forcer l'URL sans toucher à votre fichier js
+        run: npx cypress run
+        env:
+          CYPRESS_BASE_URL: http://localhost:8085
+
+      # ==========================================
+      # SECTION 3 : NETTOYAGE ET LOGS
+      # ==========================================
       - name: Show test results
         run: cat test-results.txt
 
@@ -96,21 +125,3 @@ jobs:
       - name: Stop services
         if: always()
         run: docker-compose down
-
-  frontend-tests:
-    runs-on: ubuntu-latest
-    needs: backend-tests
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Install Cypress
-        run: npm install cypress --save-dev
-
-      - name: Run Cypress tests
-        run: npx cypress run
