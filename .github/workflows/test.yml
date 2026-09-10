@@ -52,8 +52,6 @@ jobs:
             exit 1
           fi
 
-      
-
       - name: Test inscription API (missing fields)
         run: |
           RESPONSE=$(curl -s -X POST -d "nom=&email=" http://localhost:8081/api.php)
@@ -75,9 +73,6 @@ jobs:
             echo "Duplicate email test failed ❌" >> test-results.txt
             exit 1
           fi
-
-
-
 
       - name: Show test results
         run: cat test-results.txt
