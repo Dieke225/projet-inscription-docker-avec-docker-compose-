@@ -22,7 +22,7 @@ jobs:
       - name: Build and start services
         run: docker-compose up -d --build
 
-    - name: Wait for backend
+       - name: Wait for backend
         run: |
           for i in {1..20}; do
             # On cible directement l'interrupteur interne du fichier api.php via le mot clé /health
