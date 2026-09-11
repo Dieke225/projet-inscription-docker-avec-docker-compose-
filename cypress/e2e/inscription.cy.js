@@ -1,6 +1,6 @@
 describe('Inscription frontend', () => {
   beforeEach(() => {
-    cy.visit('/'); // Utilise la variable CYPRESS_BASE_URL configurée à http://localhost:3000
+    cy.visit('/'); // Utilise la variable CYPRESS_BASE_URL configurée à http://localhost:8085
   });
 
   it('inscrit un utilisateur avec succès', () => {
