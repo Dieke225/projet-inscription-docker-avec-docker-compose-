@@ -19,14 +19,35 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq curl
 
+      # ---------------------------------------------------------
+      # OPTIMISATION 1 : Configuration du moteur de cache Docker Buildx
+      # ---------------------------------------------------------
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ---------------------------------------------------------
+      # OPTIMISATION 2 : Caching des dépendances Node et du binaire Cypress
+      # ---------------------------------------------------------
+      - name: Cache Cypress binary and Node modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/Cypress
+            node_modules
+          key: ${{ runner.os }}-cypress-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-cypress-
+
+      # Construction et démarrage avec Buildx pour activer le cache Docker
       - name: Build and start services
-        run: docker compose up -d --build
+        run: |
+          docker compose build --build-arg BUILDKIT_INLINE_CACHE=1
+          docker compose up -d
 
       - name: Wait for services to be healthy
         run: |
           echo "Waiting for services to initialize via Nginx..."
           sleep 15
-          # On vérifie la santé globale directement à travers le proxy Nginx sur le port 80
           if curl -s http://localhost/api.php > /dev/null; then
             echo "All services are up and responding via Nginx ✅"
           else
@@ -55,7 +76,6 @@ jobs:
 
       - name: Test inscription API (missing fields)
         run: |
-          # ✅ CORRIGÉ : Remplacement de http://localhost:8081 par http://localhost
           RESPONSE=$(curl -s -X POST -d "nom=&email=" http://localhost/api.php)
           echo "Missing fields response: $RESPONSE" >> test-results.txt
           SUCCESS_STATUS=$(echo "$RESPONSE" | jq -r '.success' 2>/dev/null || echo "invalid_json")
@@ -88,19 +108,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install and Execute Cypress
         run: |
-          npm init -y
+          # npm init -y crée un package.json s'il n'existe pas pour stabiliser le cache
+          [ -f package.json ] || npm init -y
+          
+          # Installation classique
           npm install cypress
           
-          # Génération de la configuration pointant sur le fichier à la racine
           echo "const { defineConfig } = require('cypress'); module.exports = defineConfig({ e2e: { supportFile: false, specPattern: './*.cy.{js,ts}' } });" > cypress.config.js
           
           npx cypress run --browser chrome --config video=false
         env:
-          # Cypress utilise maintenant l'URL unifiée sans spécifier de port (port 80 par défaut)
           CYPRESS_BASE_URL: http://localhost
 
       # ==========================================
