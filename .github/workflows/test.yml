@@ -55,7 +55,8 @@ jobs:
 
       - name: Test inscription API (missing fields)
         run: |
-          RESPONSE=$(curl -s -X POST -d "nom=&email=" http://localhost:8081/api.php)
+          # ✅ CORRIGÉ : Remplacement de http://localhost:8081 par http://localhost
+          RESPONSE=$(curl -s -X POST -d "nom=&email=" http://localhost/api.php)
           echo "Missing fields response: $RESPONSE" >> test-results.txt
           SUCCESS_STATUS=$(echo "$RESPONSE" | jq -r '.success' 2>/dev/null || echo "invalid_json")
           if [ "$SUCCESS_STATUS" = "false" ]; then
