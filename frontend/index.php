@@ -12,7 +12,7 @@
       <!-- Colonne gauche : formulaire -->
       <div class="col form-container">
         <h1>Inscription</h1>
-        <form method="POST" action="http://localhost:8081/api.php">
+        <form method="POST" action="http://api.php">
           <label>Nom :</label>
           <input type="text" name="nom" required>
           <label>Email :</label>

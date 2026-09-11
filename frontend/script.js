@@ -21,20 +21,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const response = await fetch("http://localhost:8081/api.php", {
+      // ✅ Utilisation du chemin relatif unifié par Nginx
+      const response = await fetch("/api.php", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: `nom=${encodeURIComponent(nom)}&email=${encodeURIComponent(email)}`
       });
 
-      const result = await response.json(); // ✅ backend renvoie du JSON
+      const result = await response.json(); 
       messageBox.style.color = result.success ? "green" : "red";
       messageBox.textContent = result.message;
 
       if (result.success) {
         nomInput.value = "";
         emailInput.value = "";
-        afficherInscriptions(); // ✅ rafraîchir la liste
+        afficherInscriptions(); 
       }
 
     } catch (error) {
@@ -42,17 +43,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Charger la liste dès l’ouverture
   afficherInscriptions();
-
-  // 🔹 Rafraîchir automatiquement toutes les 10 secondes
   setInterval(afficherInscriptions, 10000);
 });
 
-// Fonction pour afficher les inscriptions
 async function afficherInscriptions() {
   try {
-    const response = await fetch("http://localhost:8081/list.php");
+    // ✅ Utilisation du chemin relatif unifié par Nginx
+    const response = await fetch("/list.php");
     const data = await response.json();
 
     const container = document.getElementById("inscriptions");
@@ -61,7 +59,7 @@ async function afficherInscriptions() {
     data.forEach(user => {
       const item = document.createElement("p");
       
-    const date = new Date(user.created_at);
+      const date = new Date(user.created_at);
       const dateLocale = date.toLocaleString("fr-FR", {
         day: "2-digit",
         month: "long",

@@ -1,12 +1,9 @@
 <?php
-header("Access-Control-Allow-Origin: http://localhost:8085");
-header("Access-Control-Allow-Methods: GET");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Content-Type: application/json; charset=UTF-8"); // ✅ important
+// ✅ Nettoyage des headers CORS obsolètes (Nginx unifie tout sur le port 80, évitant le Cross-Origin)
+header("Content-Type: application/json; charset=UTF-8"); 
 
 ini_set('display_errors', 0);
 error_reporting(0);
-
 
 $host = getenv('DB_HOST') ?: 'inscription-db';
 $user = getenv('DB_USER') ?: 'root';
