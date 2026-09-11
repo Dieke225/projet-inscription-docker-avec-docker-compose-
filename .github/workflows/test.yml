@@ -43,6 +43,9 @@ jobs:
         run: |
           docker compose build --build-arg BUILDKIT_INLINE_CACHE=1
           docker compose up -d
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_ROOT_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
 
       - name: Wait for services to be healthy
         run: |
@@ -56,7 +59,7 @@ jobs:
 
       - name: Reset database users table
         run: |
-          docker exec inscription-db mysql -uroot -proot inscriptions -e "DROP TABLE IF EXISTS users; CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(255), email VARCHAR(255) NOT NULL UNIQUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+          docker exec inscription-db mysql -uroot -p"${{ secrets.DB_ROOT_PASSWORD }}" "${{ secrets.DB_NAME }}" -e "DROP TABLE IF EXISTS users; CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(255), email VARCHAR(255) NOT NULL UNIQUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
           echo "Users table reset ✅" > test-results.txt
 
       # ==========================================
@@ -103,7 +106,7 @@ jobs:
       # ==========================================
       - name: Reset table before E2E tests
         run: |
-          docker exec inscription-db mysql -uroot -proot inscriptions -e "TRUNCATE TABLE users;"
+          docker exec inscription-db mysql -uroot -p"${{ secrets.DB_ROOT_PASSWORD }}" "${{ secrets.DB_NAME }}" -e "TRUNCATE TABLE users;"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
