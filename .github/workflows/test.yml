@@ -83,13 +83,17 @@ jobs:
         run: |
           docker exec inscription-db mysql -uroot -proot inscriptions -e "TRUNCATE TABLE users;"
 
-      # MODIFICATION : Configuration robuste pour attendre le frontend-1 sur le port 3000
-      - name: Run Cypress tests
-        uses: cypress-io/github-action@v6
+      # Initialisation d'un environnement Node minimal et exécution de Cypress
+      - name: Setup Node.js and Run Cypress
+        uses: actions/setup-node@v4
         with:
-          browser: chrome
-          wait-on: 'http://localhost:8085'
-          wait-on-timeout: 60
+          node-version: 20
+
+      - name: Install and Execute Cypress
+        run: |
+          npm init -y
+          npm install cypress
+          npx cypress run --browser chrome --config video=false
         env:
           CYPRESS_BASE_URL: http://localhost:8085
 

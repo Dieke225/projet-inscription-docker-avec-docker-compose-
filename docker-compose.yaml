@@ -8,6 +8,8 @@ services:
       - "8085:8085"
     networks:
       - frontend-backend
+    environment:
+      - SERVER_NAME=localhost
     depends_on:
       backend:
         condition: service_healthy
@@ -70,10 +72,11 @@ services:
     container_name: inscription-phpmyadmin
     restart: always
     environment:
-      - PMA_HOST=db
+      - PMA_HOST=inscription-db
       - PMA_PORT=3306
       - PMA_USER=${DB_USER:-root}
       - PMA_PASSWORD=${DB_PASSWORD:-root}
+      - APACHE_HTTP_SERVER_NAME=localhost
     ports:
       - "8082:80"
     networks:
