@@ -156,3 +156,36 @@ jobs:
       - name: Stop services
         if: always()
         run: docker compose down
+
+  deploy-to-cloud:
+    runs-on: ubuntu-latest
+    # Le déploiement ne se déclenche que si tous les tests Cypress et API sont réussis
+    needs: integration-and-e2e-tests
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy to Cloud Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            # 1. Créer le dossier du projet s'il n'existe pas, ou s'y déplacer
+            if [ ! -d "/home/ubuntu/app-inscription" ]; then
+              git clone https://github.com{{ github.repository }}.git /home/ubuntu/app-inscription
+              cd /home/ubuntu/app-inscription
+            else
+              cd /home/ubuntu/app-inscription
+              git pull origin main
+            fi
+            
+            # 2. Injecter les variables sécurisées pour la production
+            export MYSQL_ROOT_PASSWORD="${{ secrets.DB_ROOT_PASSWORD }}"
+            export DB_NAME="${{ secrets.DB_NAME }}"
+            
+            # 3. Redémarrer l'infrastructure complète via Docker Compose
+            docker compose down
+            docker compose up -d --build
+            echo "Application déployée en ligne avec succès ! 🚀"
