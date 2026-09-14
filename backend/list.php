@@ -1,29 +1,43 @@
 <?php
-// ✅ Nettoyage des headers CORS obsolètes (Nginx unifie tout sur le port 80, évitant le Cross-Origin)
-header("Content-Type: application/json; charset=UTF-8"); 
+// ✅ Activation TRÈS STRICTE des erreurs pour le débogage local
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-ini_set('display_errors', 0);
-error_reporting(0);
+header("Content-Type: application/json; charset=UTF-8"); 
 
 $host = getenv('DB_HOST') ?: 'inscription-db';
 $user = getenv('DB_USER') ?: 'root';
 $pass = getenv('DB_PASSWORD') ?: 'root';
 $db   = getenv('DB_NAME') ?: 'inscriptions';
 
-$conn = new mysqli($host, $user, $pass, $db);
+try {
+    // Activer le mode d'exception pour mysqli afin d'attraper les erreurs SQL dans le catch
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+    
+    $conn = new mysqli($host, $user, $pass, $db);
 
-if ($conn->connect_error) {
+    $result = $conn->query("SELECT id, nom, email, created_at FROM users ORDER BY id DESC");
+    $rows = [];
+
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = $row;
+    }
+
+    echo json_encode($rows);
+    
+    $result->free();
+    $conn->close();
+
+} catch (Exception $e) {
+    // ✅ Si le code plante, on renvoie le message d'erreur EXACT au format texte
     http_response_code(500);
-    echo json_encode(["error" => "Erreur de connexion à la base"]);
+    echo json_encode([
+        "error" => true,
+        "message" => $e->getMessage(),
+        "file" => $e->getFile(),
+        "line" => $e->getLine()
+    ], JSON_PRETTY_PRINT);
     exit;
 }
-
-$result = $conn->query("SELECT id, nom, email, created_at FROM users ORDER BY id DESC");
-$rows = [];
-
-while ($row = $result->fetch_assoc()) {
-    $rows[] = $row;
-}
-
-echo json_encode($rows);
 ?>

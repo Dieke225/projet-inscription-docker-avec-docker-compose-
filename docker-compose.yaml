@@ -1,125 +1,73 @@
 services:
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.frontend
-    image: dieket/inscription-frontend:latest
+  db:
+    image: mysql:8.0.46
+    container_name: inscription-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    # ✅ AUTOMATISATION : Monte votre dossier de scripts SQL pour une création de tables 100% autonome
+    volumes:
+      - ./db:/docker-entrypoint-initdb.d:ro
     networks:
-      - frontend-backend
-    depends_on:
-      backend:
-        condition: service_healthy
+      - app-network
+    # ✅ CORRECTION : Utilisation de $$ pour échapper la variable dans la commande CMD de Docker
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8085"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}"]
       interval: 5s
-      timeout: 3s
-      retries: 3
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile.backend
     image: dieket/inscription-backend:latest
-    environment:
-      - DB_HOST=${DB_HOST:-inscription-db}
-      - DB_USER=${DB_USER:-root}
-      - DB_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
-      - DB_NAME=${DB_NAME:-inscriptions}
     networks:
-      - frontend-backend
-      - backend-db
-    volumes:
-      - backend_logs:/var/log/app
-      - backend_uploads:/app/uploads
+      - app-network
     depends_on:
       db:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/api.php/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
 
-  db:
-    image: mysql:8.0
-    container_name: inscription-db
-    restart: always
-    environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-inscriptions}
-    volumes:
-      - db_data:/var/lib/mysql
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "3306:3306"
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    image: dieket/inscription-frontend:latest
     networks:
-      - backend-db
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - app-network
+    depends_on:
+      backend:
+        condition: service_started
+
+  nginx-ci:
+    image: nginx:alpine
+    container_name: nginx-proxy-ci
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.ci.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - app-network
+    depends_on:
+      - frontend
+      - backend
 
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
+    image: phpmyadmin:latest
     container_name: inscription-phpmyadmin
-    restart: always
+    # Note : 'links' est obsolète dans Docker moderne, le partage du 'app-network' suffit amplement
     environment:
-      - PMA_HOST=inscription-db
-      - PMA_PORT=3306
-      - PMA_USER=${DB_USER:-root}
-      - PMA_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
-      - APACHE_HTTP_SERVER_NAME=localhost
+      PMA_HOST: inscription-db # ✅ Aligné sur le container_name exact de votre service MySQL
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     ports:
       - "8082:80"
     networks:
-      - backend-db
+      - app-network
     depends_on:
       db:
         condition: service_healthy
 
-  nginx-proxy:
-    image: nginx:alpine
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443" # ✅ AJOUT : Ouverture du port HTTPS sécurisé vers l'extérieur
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - certbot-etc:/etc/letsencrypt:ro          # ✅ AJOUT : Partage des certificats avec Nginx
-      - certbot-var:/var/lib/letsencrypt:ro
-      - webroot-path:/var/www/certbot:ro        # ✅ AJOUT : Dossier de vérification ACME pour Let's Encrypt
-    networks:
-      - frontend-backend
-    depends_on:
-      frontend:
-        condition: service_healthy
-      backend:
-        condition: service_healthy
-
-  # ==========================================
-  # AJOUT : CONTENEUR CERTBOT POUR LE SSL
-  # ==========================================
-  certbot:
-    image: certbot/certbot:latest
-    restart: unless-stopped
-    volumes:
-      - certbot-etc:/etc/letsencrypt
-      - certbot-var:/var/lib/letsencrypt
-      - webroot-path:/var/www/certbot
-    # Commande de renouvellement automatique toutes les 12 heures
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done'"
-
-volumes:
-  frontend_data:
-  backend_logs:
-  backend_uploads:
-  db_data:
-  certbot-etc:      # ✅ AJOUT : Stockage persistant des clés de sécurité
-  certbot-var:      # ✅ AJOUT
-  webroot-path:     # ✅ AJOUT
-
 networks:
-  frontend-backend:
-  backend-db:
+  app-network:
+    driver: bridge

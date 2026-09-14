@@ -20,13 +20,13 @@ jobs:
           sudo apt-get install -y jq curl
 
       # ---------------------------------------------------------
-      # OPTIMISATION 1 : Configuration du moteur de cache Docker Buildx
+      # OPTIMISATION 1 : Configuration du cache Docker Buildx
       # ---------------------------------------------------------
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       # ---------------------------------------------------------
-      # OPTIMISATION 2 : Caching des dépendances Node et du binaire Cypress
+      # OPTIMISATION 2 : Caching du binaire Cypress et des modules Node
       # ---------------------------------------------------------
       - name: Cache Cypress binary and Node modules
         uses: actions/cache@v4
@@ -38,7 +38,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cypress-
 
-      # Construction et démarrage avec Buildx pour activer le cache Docker
+      # Démarre l'infrastructure de test (lit automatiquement le fichier docker-compose.yml)
       - name: Build and start services
         run: |
           docker compose build --build-arg BUILDKIT_INLINE_CACHE=1
@@ -47,19 +47,19 @@ jobs:
           MYSQL_ROOT_PASSWORD: ${{ secrets.DB_ROOT_PASSWORD }}
           DB_NAME: ${{ secrets.DB_NAME }}
 
+      # Attente dynamique via le proxy Nginx du CI (Port 80 HTTP)
       - name: Wait for services to be healthy
         run: |
-          echo "Attente dynamique du démarrage de Nginx et de l'API..."
-          # Boucle jusqu'à ce que Nginx renvoie un code HTTP valide (200, 302, etc.)
-          timeout 30s bash -c '
+          echo "Attente dynamique du routeur Nginx et de l'API..."
+          timeout 45s bash -c '
             until curl -s -o /dev/null -w "%{http_code}" http://localhost/api.php | grep -q "200"; do
-              echo "L''API n''est pas encore prête, attente de 1 seconde..."
-              sleep 1
+              echo "L''infrastructure de test n''est pas encore prête, attente..."
+              sleep 2
             done
           '
-          echo "L''API et Nginx répondent correctement ! Passage aux tests ✅"
+          echo "L''API et le Frontend répondent à travers Nginx ! ✅"
 
-
+      # Réinitialisation de la base de données de test
       - name: Reset database users table
         run: |
           docker exec inscription-db mysql -uroot -p"${{ secrets.DB_ROOT_PASSWORD }}" "${{ secrets.DB_NAME }}" -e "DROP TABLE IF EXISTS users; CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(255), email VARCHAR(255) NOT NULL UNIQUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
@@ -114,18 +114,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
 
       - name: Install and Execute Cypress
         run: |
-          # npm init -y crée un package.json s'il n'existe pas pour stabiliser le cache
           [ -f package.json ] || npm init -y
-          
-          # Installation classique
           npm install cypress
-          
           echo "const { defineConfig } = require('cypress'); module.exports = defineConfig({ e2e: { supportFile: false, specPattern: './*.cy.{js,ts}' } });" > cypress.config.js
-          
           npx cypress run --browser chrome --config video=false
         env:
           CYPRESS_BASE_URL: http://localhost
@@ -159,7 +154,6 @@ jobs:
 
   deploy-to-cloud:
     runs-on: ubuntu-latest
-    # Le déploiement ne se déclenche que si tous les tests Cypress et API sont réussis
     needs: integration-and-e2e-tests
     if: github.ref == 'refs/heads/main'
 
@@ -172,7 +166,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            # 1. Créer le dossier du projet s'il n'existe pas, ou s'y déplacer
             if [ ! -d "/home/ubuntu/app-inscription" ]; then
               git clone https://github.com{{ github.repository }}.git /home/ubuntu/app-inscription
               cd /home/ubuntu/app-inscription
@@ -181,11 +174,10 @@ jobs:
               git pull origin main
             fi
             
-            # 2. Injecter les variables sécurisées pour la production
             export MYSQL_ROOT_PASSWORD="${{ secrets.DB_ROOT_PASSWORD }}"
             export DB_NAME="${{ secrets.DB_NAME }}"
             
-            # 3. Redémarrer l'infrastructure complète via Docker Compose
-            docker compose down
-            docker compose up -d --build
-            echo "Application déployée en ligne avec succès ! 🚀"
+            # Déploiement en production : on force Docker à lire la configuration de production (SSL)
+            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml up -d --build
+            echo "Application déployée en production avec succès ! 🚀"

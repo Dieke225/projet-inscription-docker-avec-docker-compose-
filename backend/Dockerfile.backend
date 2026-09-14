@@ -1,25 +1,23 @@
 # Stage 1 : build
 FROM php:8.2-apache AS builder
 WORKDIR /var/www/html
-
-# --- MODIFIÉ : On copie TOUS les fichiers du dossier local ./backend (api.php, list.php, etc.) ---
 COPY . . 
 
 # Stage 2 : runtime
 FROM php:8.2-apache
 
-# Installer extensions nécessaires
 RUN docker-php-ext-install mysqli pdo pdo_mysql
 RUN echo 'ServerName localhost' >> /etc/apache2/apache2.conf
 
-# Créer utilisateur non-root "diekeuser"
 RUN groupadd -g 1001 diekeuser && \
-    useradd -u 1001 -g diekeuser -m diekeuser
+    useradd -u 1001 -g diekeuser -m diekeuser && \
+    # ✅ Changement du port interne d'Apache vers 8081 pour autoriser diekeuser
+    sed -i 's#Listen 80#Listen 8081#' /etc/apache2/ports.conf && \
+    sed -i 's#<VirtualHost \*:80>#<VirtualHost *:8081>#' /etc/apache2/sites-available/000-default.conf
 
-# Copier TOUT le code depuis le builder
 COPY --from=builder /var/www/html /var/www/html
 
 RUN chown -R diekeuser:diekeuser /var/www/html
 USER diekeuser
 
-EXPOSE 80
+EXPOSE 8081

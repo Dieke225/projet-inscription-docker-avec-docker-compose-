@@ -1,0 +1,61 @@
+
+services:
+  db:
+    image: mysql:8.0.46
+    container_name: inscription-db-prod
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - app-network
+
+  backend:
+    image: dieket/inscription-backend:latest
+    restart: always
+    networks:
+      - app-network
+    depends_on:
+      - db
+
+  frontend:
+    image: dieket/inscription-frontend:latest
+    restart: always
+    networks:
+      - app-network
+
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: nginx-proxy-prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot-etc:/etc/letsencrypt:ro
+      - certbot-var:/var/www/certbot:ro
+    networks:
+      - app-network
+    depends_on:
+      - frontend
+      - backend
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot-prod
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit 0; 25m; while :; do certbot renew; sleep 12h & wait $${!}; done'"
+
+volumes:
+  db-data:
+  certbot-etc:
+  certbot-var:
+
+networks:
+  app-network:
+    driver: bridge
