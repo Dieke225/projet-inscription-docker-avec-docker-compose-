@@ -21,8 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      // ✅ Utilisation du chemin relatif unifié par Nginx
-      const response = await fetch("/api.php", {
+      // ✅ AMÉLIORÉ : Utilisation du chemin relatif strict "api.php" au lieu de "/api.php"
+      const response = await fetch("api.php", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: `nom=${encodeURIComponent(nom)}&email=${encodeURIComponent(email)}`
@@ -49,8 +49,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function afficherInscriptions() {
   try {
-    // ✅ Utilisation du chemin relatif unifié par Nginx
-    const response = await fetch("/list.php");
+    // ✅ AMÉLIORÉ : Utilisation du chemin relatif strict "list.php" au lieu de "/list.php"
+    const response = await fetch("list.php");
     const data = await response.json();
 
     const container = document.getElementById("inscriptions");
