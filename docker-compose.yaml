@@ -22,6 +22,12 @@ services:
       context: ./backend
       dockerfile: Dockerfile.backend
     image: dieket/inscription-backend:latest
+    environment:
+      - DB_HOST=${DB_HOST:-inscription-db}
+      - DB_USER=${DB_USER:-root}
+      # ✅ CORRECTION INTERNATIONALE : Transmet le mot de passe root sécurisé de la CI à PHP
+      - DB_PASSWORD=${MYSQL_ROOT_PASSWORD:-root} 
+      - DB_NAME=${DB_NAME:-inscriptions}
     networks:
       - app-network
     depends_on:

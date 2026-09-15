@@ -1,11 +1,10 @@
 <?php
-// ✅ Nettoyage des headers CORS obsolètes (Nginx élimine le besoin de Cross-Origin)
 header("Content-Type: application/json; charset=UTF-8");
 
 ini_set('display_errors', 0);
 error_reporting(0);
 
-// --- FONCTION DE CONNEXION AVEC RECONNEXION AUTOMATIQUE (ANTI-ERREUR 500) ---
+// --- FONCTION DE CONNEXION AVEC RECONNEXION AUTOMATIQUE ---
 function get_db_connection() {
     $host = getenv('DB_HOST') ?: 'inscription-db';
     $user = getenv('DB_USER') ?: 'root';
@@ -15,28 +14,25 @@ function get_db_connection() {
     $max_attempts = 5;
     $attempts = 0;
     
-    mysqli_report(MYSQLI_REPORT_OFF); // Désactive les warnings d'affichage brut de mysqli
+    // ✅ CORRIGÉ : On active les exceptions STRICTES pour que le Try/Catch fonctionne !
+    mysqli_report(MYSQLI_REPORT_STRICT | MYSQLI_REPORT_ERROR); 
 
     while ($attempts < $max_attempts) {
-        $conn = @new mysqli($host, $user, $pass, $db);
-        
-        if (!$conn->connect_error) {
+        try {
+            $conn = new mysqli($host, $user, $pass, $db);
             return $conn; // Connexion réussie !
+        } catch (Exception $e) {
+            $attempts++;
+            sleep(2);
         }
-        
-        $attempts++;
-        sleep(2); // Attend 2 secondes avant la prochaine tentative (laisse le temps à MySQL d'exécuter init.sql)
     }
     
-    return false; // Échec après toutes les tentatives
+    return false;
 }
-// --- FIN DE LA FONCTION ---
-
 
 // --- ROUTE HEALTH ---
 if (strpos($_SERVER['REQUEST_URI'], '/health') !== false) {
     $conn = get_db_connection();
-
     if (!$conn) {
         http_response_code(500);
         echo json_encode(["status" => "error", "db" => "unreachable"]);
@@ -47,10 +43,8 @@ if (strpos($_SERVER['REQUEST_URI'], '/health') !== false) {
     }
     exit;
 }
-// --- FIN ROUTE HEALTH ---
 
-
-// Connexion principale pour la route d'inscription
+// Connexion principale
 $conn = get_db_connection();
 
 if (!$conn) {
@@ -74,7 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute();
         echo json_encode(["success" => true, "message" => "Inscription réussie ✅"]);
     } catch (mysqli_sql_exception $e) {
-        if (str_contains($e->getMessage(), 'Duplicate entry')) {
+        // ✅ Intercepte le code d'erreur 1062 (Duplicate entry spécifique à MySQL)
+        if ($e->getCode() === 1062 || str_contains($e->getMessage(), 'Duplicate entry')) {
             echo json_encode(["success" => false, "message" => "Cette adresse e‑mail est déjà inscrite ❌"]);
         } else {
             echo json_encode(["success" => false, "message" => "Une erreur est survenue lors de l'inscription ❌"]);
