@@ -5,17 +5,16 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
-    # ✅ AUTOMATISATION : Monte votre dossier de scripts SQL pour une création de tables 100% autonome
     volumes:
       - ./db:/docker-entrypoint-initdb.d:ro
     networks:
-      - app-network
-    # ✅ CORRECTION : Utilisation de $$ pour échapper la variable dans la commande CMD de Docker
+      - app-network # ✅ Correct : On liste simplement le nom du réseau ici !
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}"]
       interval: 5s
       timeout: 5s
       retries: 5
+
 
   backend:
     build:
@@ -74,6 +73,8 @@ services:
       db:
         condition: service_healthy
 
+# Tout en bas de votre fichier docker-compose.yml principal :
 networks:
   app-network:
     driver: bridge
+    name: app-network # ✅ Correct : C'est ici que Docker Compose l'autorise !

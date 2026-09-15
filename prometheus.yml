@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s # Prometheus va récolter les données toutes les 15 secondes
+
+scrape_configs:
+  # On demande à Prometheus de s'auto-surveiller
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # On demande à Prometheus de récolter les métriques de cAdvisor
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['monitoring-cadvisor:8080']

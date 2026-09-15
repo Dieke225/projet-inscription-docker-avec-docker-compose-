@@ -181,3 +181,21 @@ jobs:
             docker compose -f docker-compose.prod.yml down
             docker compose -f docker-compose.prod.yml up -d --build
             echo "Application déployée en production avec succès ! 🚀"
+
+            # ... (votre déploiement existant se termine par docker compose up -d --build)
+
+      - name: Deploy Monitoring Stack via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            cd /var/www/inscription-app
+            
+            # Lancement de la stack de monitoring de production
+            docker compose -f docker-compose.monitoring.prod.yml down
+            docker compose -f docker-compose.monitoring.prod.yml up -d
+            echo "Stack Prometheus et Grafana opérationnelle en production ! 📊"
+            
